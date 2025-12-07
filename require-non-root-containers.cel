@@ -1,0 +1,57 @@
+// According the Pod Security Standards, Containers must be required to run as non-root users.
+// https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
+
+// Pod or Containers must set `securityContext.runAsNonRoot`
+(
+  (has(object.spec.template.spec.securityContext) && has(object.spec.template.spec.securityContext.runAsNonRoot)) ||
+  object.spec.template.spec.containers.all(container,
+    has(container.securityContext) && has(container.securityContext.runAsNonRoot)
+  )
+)
+&&
+
+// Neither Pod nor Containers should set `securityContext.runAsNonRoot` to false
+(
+  (!has(object.spec.template.spec.securityContext) || !has(object.spec.template.spec.securityContext.runAsNonRoot) || object.spec.template.spec.securityContext.runAsNonRoot != false)
+  &&
+  object.spec.template.spec.containers.all(container,
+    !has(container.securityContext) || !has(container.securityContext.runAsNonRoot) || container.securityContext.runAsNonRoot != false
+  )
+)
+
+// Containers must drop `ALL` capabilities,
+object.spec.template.spec.containers.all(container,
+  has(container.securityContext) &&
+  has(container.securityContext.capabilities) &&
+  has(container.securityContext.capabilities.drop) &&
+  size(container.securityContext.capabilities.drop) >= 1 &&
+  container.securityContext.capabilities.drop.exists(c, c == 'ALL')
+)
+&&
+// and are only permitted to add back the `NET_BIND_SERVICE` capability
+object.spec.template.spec.containers.all(container,
+  !has(container.securityContext) ||
+  !has(container.securityContext.capabilities) ||
+  !has(container.securityContext.capabilities.add) ||
+  container.securityContext.capabilities.add.all(cap, cap in params.allowedCapabilities)
+)
+
+// Checks if the container images are tagged following the semantic version.
+
+object.spec.containers.all(container,
+  container.image.contains("@sha256") || // allow digest
+  container.image.lastIndexOf(":") > -1 &&
+  container.image.substring(container.image.lastIndexOf(":") + 1)
+    .matches('^v?(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$')
+  // the regex above is suggested by semver.org: https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
+  // allowing the "v" prefix
+)
+
+// Quantity library introduced in Kubernetes 1.28
+
+isQuantity(object.memory) && 
+quantity(object.memory)
+  .add(quantity("700M"))
+  .sub(1) // test without this subtraction
+  .isLessThan(quantity(object.limit))
+

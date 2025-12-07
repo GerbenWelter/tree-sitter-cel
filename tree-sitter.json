@@ -1,0 +1,38 @@
+{
+  "$schema": "https://tree-sitter.github.io/tree-sitter/assets/schemas/config.schema.json",
+  "grammars": [
+    {
+      "name": "cel",
+      "camelcase": "Cel",
+      "title": "Cel",
+      "scope": "source.cel",
+      "file-types": ["cel"],
+      "injection-regex": "^cel$",
+      "class-name": "TreeSitterCel"
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "license": "MIT",
+    "description": "Common Expression Language",
+    "authors": [
+      {
+        "name": "Gerben Welter",
+        "url": "https://github.com/GerbenWelter"
+      }
+    ],
+    "links": {
+      "repository": "https://github.com/tree-sitter/tree-sitter-cel",
+      "funding": ""
+    }
+  },
+  "bindings": {
+    "c": false,
+    "go": true,
+    "node": true,
+    "python": true,
+    "rust": true,
+    "swift": false,
+    "zig": false
+  }
+}
